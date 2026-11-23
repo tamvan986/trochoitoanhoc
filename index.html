@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thư viện trò chơi — Học Toán Cùng Thầy Tâm</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", system-ui, -apple-system, sans-serif; background: #f0f4ff; color: #1e293b; line-height: 1.5; }
+  header { background: linear-gradient(135deg, #4f46e5, #7c3aed 55%, #db2777); color: #fff; padding: 28px 18px 34px; text-align: center; }
+  header h1 { font-size: 26px; margin-bottom: 6px; }
+  header p { opacity: .92; font-size: 15px; }
+  .wrap { max-width: 960px; margin: -18px auto 40px; padding: 0 14px; }
+  .search { width: 100%; padding: 13px 16px; font-size: 16px; border: 2px solid #c7d2fe; border-radius: 12px; outline: none; background: #fff; box-shadow: 0 4px 14px rgba(79,70,229,.12); }
+  .search:focus { border-color: #4f46e5; }
+  .count { margin: 16px 4px 6px; color: #475569; font-size: 14px; }
+  h2 { margin: 22px 4px 10px; font-size: 19px; color: #312e81; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+  .card { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 2px 10px rgba(30,41,59,.08); border-top: 5px solid #4f46e5; display: flex; flex-direction: column; }
+  .card.c-blue { border-top-color: #2563eb; }
+  .card.c-green { border-top-color: #059669; }
+  .card.c-amber { border-top-color: #d97706; }
+  .card.c-pink { border-top-color: #db2777; }
+  .card.c-violet { border-top-color: #7c3aed; }
+  .card.c-teal { border-top-color: #0d9488; }
+  .icon { font-size: 34px; }
+  .card h3 { font-size: 17px; margin: 8px 0 4px; color: #1e293b; }
+  .card p { font-size: 14px; color: #475569; flex: 1; }
+  .card a { display: inline-block; margin-top: 12px; text-decoration: none; background: #4f46e5; color: #fff; font-weight: 600; padding: 9px 16px; border-radius: 9px; text-align: center; }
+  .card a:hover { background: #4338ca; }
+  .empty { display: none; text-align: center; color: #64748b; padding: 30px 0; font-size: 15px; }
+  footer { text-align: center; color: #64748b; font-size: 13px; padding: 0 16px 30px; }
+  footer b { color: #334155; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎮 Thư viện trò chơi</h1>
+  <p>Học Toán Cùng Thầy Tâm — bấm vào trò chơi để mở ngay</p>
+</header>
+<div class="wrap">
+  <input class="search" id="search" type="search" placeholder="🔍 Tìm trò chơi… ví dụ: triệu phú, zombie, gọi tên" oninput="filterGames()">
+  <p class="count" id="count"></p>
+
+  <h2>🆕 Trò chơi mới tạo</h2>
+  <div class="grid">
+
+    <div class="card c-green" data-name="học mà chơi toán hk1 lớp 12 chạy bắn chim bay">
+      <div class="icon">🎮</div>
+      <h3>Học Mà Chơi — Toán HK1 Lớp 12</h3>
+      <p>Chạy bắn &amp; chim bay, ôn Toán HK1 Lớp 12.</p>
+      <a href="H_c_M__Ch_i__15.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-amber" data-name="cáo nhỏ săn điểm mario toán 12">
+      <div class="icon">🦊</div>
+      <h3>Cáo Nhỏ Săn Điểm</h3>
+      <p>Chạy – nhảy kiểu Mario, 3 màn, 40 câu Toán 12. Tự chơi trên điện thoại.</p>
+      <a href="cao-nho-san-diem.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-teal" data-name="đảo phiêu lưu toán 12 matific">
+      <div class="icon">🏝️</div>
+      <h3>Đảo Phiêu Lưu Toán 12</h3>
+      <p>6 đảo theo 6 chương Toán 12, 54 câu, khám phá rồi luyện tập, mở khóa từng đảo.</p>
+      <a href="dao-phieu-luu-toan-12.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+  </div>
+
+  <h2>🎲 Trò chơi</h2>
+  <div class="grid" id="games">
+
+    <div class="card c-violet" data-name="ai gesture quiz chibi cử chỉ vận động">
+      <div class="icon">🤖</div>
+      <h3>AI Gesture Quiz Chibi</h3>
+      <p>Trò chơi vận động cử chỉ: học sinh làm động tác, AI nhận diện để trả lời câu hỏi.</p>
+      <a href="ai-gesture-quiz_0_zaup.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-amber" data-name="ai là triệu phú học đường">
+      <div class="icon">💰</div>
+      <h3>Ai Là Triệu Phú — Triệu Phú Học Đường</h3>
+      <p>Trả lời câu hỏi leo thang giải thưởng như chương trình Ai là triệu phú.</p>
+      <a href="ai-la-trieu-phu.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-green" data-name="chiếc nón kỳ diệu đoán thuật ngữ toán học">
+      <div class="icon">🎡</div>
+      <h3>Chiếc Nón Kỳ Diệu</h3>
+      <p>Quay nón chọn ô chữ, đoán thuật ngữ Toán học.</p>
+      <a href="chiec-non-ky-dieu.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-pink" data-name="chuyến đò tri ân 20 11 thầy cô">
+      <div class="icon">🚣</div>
+      <h3>Chuyến Đò Tri Ân</h3>
+      <p>Trò chơi tri ân thầy cô nhân ngày 20/11.</p>
+      <a href="chuyen-do-tri-an.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-blue" data-name="cỗ máy gọi tên may mắn gọi học sinh lên bảng">
+      <div class="icon">⚙️</div>
+      <h3>Cỗ Máy Gọi Tên May Mắn</h3>
+      <p>Gọi tên ngẫu nhiên học sinh lên bảng, công bằng và hồi hộp.</p>
+      <a href="co-may-goi-ten.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-teal" data-name="đền pha lê tri thức">
+      <div class="icon">💎</div>
+      <h3>Đền Pha Lê Tri Thức</h3>
+      <p>Khám phá đền pha lê, trả lời câu hỏi để mở kho tri thức.</p>
+      <a href="den-pha-le-tri-thuc.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-amber" data-name="đua bi may mắn">
+      <div class="icon">🏁</div>
+      <h3>Đua Bi May Mắn</h3>
+      <p>Đua bi may mắn, gọi tên ngẫu nhiên theo đường đua.</p>
+      <a href="dua-bi-may-man.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-green" data-name="đường đua thú cưng may mắn gọi tên">
+      <div class="icon">🐾</div>
+      <h3>Đường Đua Thú Cưng May Mắn</h3>
+      <p>Đua thú cưng, gọi tên ngẫu nhiên học sinh lên bảng.</p>
+      <a href="duong-dua-thu-cung.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-violet" data-name="giải cứu vương quốc hữu tỉ số hữu tỉ">
+      <div class="icon">🏰</div>
+      <h3>Giải Cứu Vương Quốc Hữu Tỉ</h3>
+      <p>Phiêu lưu giải cứu vương quốc, ôn tập số hữu tỉ.</p>
+      <a href="giai-cuu-vuong-quoc-huu-ti.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-blue" data-name="hoạt cảnh gọi tên gọi học sinh lên bảng">
+      <div class="icon">🎭</div>
+      <h3>Hoạt Cảnh Gọi Tên</h3>
+      <p>Gọi học sinh lên bảng bằng hoạt cảnh sinh động.</p>
+      <a href="hoat-canh-goi-ten.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-pink" data-name="kho báu hải tặc gọi tên may mắn">
+      <div class="icon">🏴‍☠️</div>
+      <h3>Kho Báu Hải Tặc</h3>
+      <p>Săn kho báu hải tặc, gọi tên may mắn.</p>
+      <a href="kho-bau-hai-tac.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-green" data-name="khủng long săn trứng may mắn gọi tên">
+      <div class="icon">🦕</div>
+      <h3>Khủng Long Săn Trứng May Mắn</h3>
+      <p>Khủng long săn trứng, gọi tên ngẫu nhiên.</p>
+      <a href="khung-long-san-trung.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-violet" data-name="lá bài ma thuật ai nam">
+      <div class="icon">🔮</div>
+      <h3>Lá Bài Ma Thuật</h3>
+      <p>Lật lá bài ma thuật, vọc AI cùng Nam.</p>
+      <a href="la-bai-ma-thuat.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-amber" data-name="rung chuông vàng toán 12 học kì 1">
+      <div class="icon">🔔</div>
+      <h3>Rung Chuông Vàng — Toán 12</h3>
+      <p>Rung chuông vàng, thi đấu kiến thức Toán 12 Học kì 1.</p>
+      <a href="rung-chuong-vang-toan-12.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-blue" data-name="tàu lượn siêu tốc chuyến tàu may mắn gọi tên">
+      <div class="icon">🎢</div>
+      <h3>Tàu Lượn Siêu Tốc</h3>
+      <p>Chuyến tàu may mắn, gọi tên ngẫu nhiên.</p>
+      <a href="tau-luon-sieu-toc.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-teal" data-name="thám hiểm vũ trụ">
+      <div class="icon">🚀</div>
+      <h3>Thám Hiểm Vũ Trụ</h3>
+      <p>Phiêu lưu thám hiểm vũ trụ, trả lời câu hỏi để bay xa.</p>
+      <a href="tham-hiem-vu-tru.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-violet" data-name="triệu hồi tinh cầu lớp học kỳ diệu">
+      <div class="icon">🌟</div>
+      <h3>Triệu Hồi Tinh Cầu</h3>
+      <p>Lớp học kỳ diệu: triệu hồi tinh cầu, gọi tên may mắn.</p>
+      <a href="trieu-hoi-tinh-cau.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+    <div class="card c-green" data-name="zombie toán 12 bắn trắc nghiệm">
+      <div class="icon">🧟</div>
+      <h3>Zombie Toán 12</h3>
+      <p>Bắn hạ zombie bằng cách trả lời đúng trắc nghiệm Toán 12.</p>
+      <a href="zombie-toan-12.html" target="_blank">▶ Chơi ngay</a>
+    </div>
+
+  </div>
+
+  <h2>📚 Công cụ &amp; tài liệu</h2>
+  <div class="grid">
+
+    <div class="card c-blue" data-name="quét thẻ giấy toán 12 plickers">
+      <div class="icon">📇</div>
+      <h3>Quét Thẻ Giấy Toán 12</h3>
+      <p>Học sinh xoay thẻ giấy trả lời A/B/C/D, thầy quét cả lớp bằng một điện thoại.</p>
+      <a href="quet-the-giay.html" target="_blank">▶ Mở ngay</a>
+    </div>
+
+    <div class="card c-teal" data-name="kho đề thi thử tốt nghiệp">
+      <div class="icon">📝</div>
+      <h3>Kho Đề Thi Thử Tốt Nghiệp</h3>
+      <p>Kho đề thi thử tốt nghiệp — Học Toán Cùng Thầy Tâm.</p>
+      <a href="kho-de-thi-thu.html" target="_blank">▶ Mở ngay</a>
+    </div>
+
+    <div class="card c-amber" data-name="trang chủ học toán cùng thầy tâm">
+      <div class="icon">🏠</div>
+      <h3>Trang Chủ — Học Toán Cùng Thầy Tâm</h3>
+      <p>Trang chính: trò chơi, tài liệu, thi thử.</p>
+      <a href="trang-chu.html" target="_blank">▶ Mở ngay</a>
+    </div>
+
+  </div>
+  <p class="empty" id="empty">Không tìm thấy trò chơi nào khớp với từ khóa thầy gõ.</p>
+</div>
+<footer>
+  <b>Thư viện trò chơi — Học Toán Cùng Thầy Tâm</b><br>
+  Tệp này phải nằm cùng thư mục với các file trò chơi thì các liên kết mới mở được.
+</footer>
+<script>
+  function filterGames() {
+    var q = document.getElementById('search').value.toLowerCase().trim();
+    var cards = document.querySelectorAll('.card');
+    var shown = 0;
+    cards.forEach(function (c) {
+      var hay = (c.getAttribute('data-name') + ' ' + c.querySelector('h3').textContent).toLowerCase();
+      var ok = !q || hay.indexOf(q) !== -1;
+      c.style.display = ok ? '' : 'none';
+      if (ok) shown++;
+    });
+    document.getElementById('empty').style.display = shown ? 'none' : 'block';
+    updateCount(shown);
+  }
+  function updateCount(n) {
+    var total = document.querySelectorAll('.card').length;
+    document.getElementById('count').textContent = n === total
+      ? 'Tổng cộng: ' + total + ' mục — trò chơi, công cụ và tài liệu.'
+      : 'Đang hiển thị ' + n + ' / ' + total + ' mục.';
+  }
+  updateCount(document.querySelectorAll('.card').length);
+</script>
+</body>
+</html>

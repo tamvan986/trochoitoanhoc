@@ -1,0 +1,978 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Trò Chơi Toán</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #eaf4fb;
+        --panel: #ffffff;
+        --ink: #17324a;
+        --ink-soft: #47617a;
+        --accent: #e8641c;
+        --accent-dark: #c24e10;
+        --green: #2e9e4f;
+        --green-dark: #1f7a3a;
+        --gold: #f5b921;
+        --sky-top: #7ec8f7;
+        --line: #c9dde9;
+        --btn: #ffffff;
+        --btn-line: #b9d2e2;
+        --danger: #d93b3b;
+        --shadow: 0 6px 18px rgba(23, 50, 74, .14);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0e1c29;
+          --panel: #16293c;
+          --ink: #eaf3fa;
+          --ink-soft: #a9c2d6;
+          --line: #2c465e;
+          --btn: #1d3449;
+          --btn-line: #38536d;
+          --shadow: 0 6px 18px rgba(0, 0, 0, .45);
+        }
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Nunito", system-ui, sans-serif;
+        min-height: 100dvh;
+      }
+      button { font-family: inherit; cursor: pointer; }
+      .wrap {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 10px 12px calc(14px + env(safe-area-inset-bottom));
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      /* ---------- HUD ---------- */
+      .hud {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        background: var(--panel);
+        border: 2px solid var(--line);
+        border-radius: 14px;
+        padding: 8px 12px;
+        box-shadow: var(--shadow);
+        font-family: "Baloo 2", "Nunito", sans-serif;
+      }
+      .hud .stat { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 1.02rem; white-space: nowrap; }
+      .hud .spacer { flex: 1; }
+      .hearts { color: var(--danger); font-size: 1.15rem; letter-spacing: 2px; }
+      .hearts .off { color: var(--line); }
+      .coin-dot {
+        width: 18px; height: 18px; border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #ffe27a, var(--gold) 60%, #d99a06);
+        border: 2px solid #d99a06;
+        display: inline-block;
+      }
+      .timer.low { color: var(--danger); }
+      @media (max-width: 480px) {
+        .hud { padding: 6px 10px; gap: 6px; }
+        .hud .stat { font-size: .92rem; }
+        .hearts { font-size: 1rem; letter-spacing: 1px; }
+        .icon-btn { min-width: 40px; min-height: 40px; }
+      }
+      .icon-btn {
+        min-width: 44px; min-height: 44px;
+        border-radius: 12px;
+        border: 2px solid var(--btn-line);
+        background: var(--btn);
+        color: var(--ink);
+        font-size: 1.15rem;
+        display: inline-flex; align-items: center; justify-content: center;
+      }
+      .icon-btn:active { transform: scale(.94); }
+      /* ---------- Stage ---------- */
+      .stage {
+        position: relative;
+        border-radius: 18px;
+        overflow: hidden;
+        border: 3px solid #2f6db3;
+        box-shadow: var(--shadow);
+        background: var(--sky-top);
+        touch-action: none;
+      }
+      canvas#game { display: block; width: 100%; aspect-ratio: 16 / 10; }
+      .overlay {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column; align-items: center; justify-content: safe center;
+        gap: 12px;
+        padding: 18px;
+        text-align: center;
+        background: rgba(10, 30, 48, .72);
+        color: #fff;
+        overflow-y: auto;
+      }
+      /* On phones the game frame is short (16:10), so overlays take the
+         whole screen instead — title, options and buttons always fit. */
+      @media (max-width: 760px) {
+        .overlay { position: fixed; inset: 0; z-index: 60; padding: 14px 12px calc(14px + env(safe-area-inset-bottom)); }
+        .fox-badge { width: 64px; height: 64px; }
+        .game-title { font-size: 1.65rem; }
+        .game-sub { font-size: .95rem; }
+        .overlay .card { padding: 16px 14px; gap: 10px; }
+        .howto { font-size: .9rem; line-height: 1.45; }
+      }
+      .overlay[hidden] { display: none; }
+      .overlay .card {
+        background: var(--panel); color: var(--ink);
+        border-radius: 18px;
+        padding: 20px 18px;
+        max-width: 520px; width: 100%;
+        box-shadow: var(--shadow);
+        display: flex; flex-direction: column; gap: 12px; align-items: stretch;
+      }
+      .game-title {
+        font-family: "Baloo 2", sans-serif;
+        font-size: clamp(1.7rem, 6vw, 2.6rem);
+        font-weight: 800;
+        margin: 0;
+        color: #fff;
+        text-shadow: 0 3px 0 rgba(0,0,0,.25);
+        line-height: 1.1;
+      }
+      .game-sub { margin: 0; color: #dceefb; font-weight: 600; max-width: 460px; }
+      .fox-badge { width: 92px; height: 92px; }
+      .big-btn {
+        min-height: 56px;
+        border: none; border-radius: 14px;
+        background: var(--accent);
+        color: #fff;
+        font-family: "Baloo 2", sans-serif;
+        font-size: 1.25rem; font-weight: 800;
+        padding: 10px 26px;
+        box-shadow: 0 5px 0 var(--accent-dark);
+      }
+      .big-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--accent-dark); }
+      .big-btn.green { background: var(--green); box-shadow: 0 5px 0 var(--green-dark); }
+      .big-btn.green:active { box-shadow: 0 2px 0 var(--green-dark); }
+      .topic-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+      .topic-btn {
+        min-height: 48px;
+        padding: 8px 16px;
+        border-radius: 999px;
+        border: 2px solid var(--btn-line);
+        background: var(--btn);
+        color: var(--ink);
+        font-weight: 800; font-size: .98rem;
+      }
+      .topic-btn.sel { background: var(--gold); border-color: #d99a06; color: #4a3200; }
+      .howto {
+        text-align: left; margin: 0; padding-left: 20px;
+        color: var(--ink-soft); font-weight: 600; line-height: 1.55; font-size: .95rem;
+      }
+      .howto b { color: var(--ink); }
+      /* ---------- Question ---------- */
+      .q-tag {
+        align-self: flex-start;
+        background: #dceffb; color: #1c5d99;
+        border-radius: 999px; padding: 4px 12px;
+        font-weight: 800; font-size: .85rem;
+      }
+      @media (prefers-color-scheme: dark) { .q-tag { background: #23486b; color: #bfe0f7; } }
+      .q-text { font-size: 1.18rem; font-weight: 800; line-height: 1.45; text-align: left; margin: 0; }
+      .q-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      @media (max-width: 480px) { .q-opts { grid-template-columns: 1fr; } }
+      .opt-btn {
+        min-height: 56px;
+        border-radius: 12px;
+        border: 2px solid var(--btn-line);
+        background: var(--btn);
+        color: var(--ink);
+        font-size: 1.05rem; font-weight: 700;
+        padding: 10px 12px;
+        text-align: left;
+        display: flex; gap: 10px; align-items: center;
+      }
+      .opt-btn .letter {
+        flex: 0 0 auto;
+        width: 30px; height: 30px; border-radius: 50%;
+        background: #dceffb; color: #1c5d99;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-family: "Baloo 2", sans-serif; font-weight: 800;
+      }
+      @media (prefers-color-scheme: dark) { .opt-btn .letter { background: #23486b; color: #bfe0f7; } }
+      .opt-btn.right { border-color: var(--green); background: rgba(46, 158, 79, .14); }
+      .opt-btn.right .letter { background: var(--green); color: #fff; }
+      .opt-btn.wrong { border-color: var(--danger); background: rgba(217, 59, 59, .12); }
+      .opt-btn.wrong .letter { background: var(--danger); color: #fff; }
+      .opt-btn:disabled { opacity: .92; cursor: default; }
+      .q-feedback { text-align: left; font-weight: 700; line-height: 1.5; margin: 0; display: none; }
+      .q-feedback.show { display: block; }
+      .q-feedback .ok { color: var(--green); }
+      .q-feedback .no { color: var(--danger); }
+      /* ---------- End overlay ---------- */
+      .end-emoji { font-size: 2.6rem; line-height: 1; }
+      .end-title { font-family: "Baloo 2", sans-serif; font-size: 1.6rem; font-weight: 800; margin: 0; }
+      .end-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .end-stats .cell {
+        background: var(--bg); border: 2px solid var(--line); border-radius: 12px;
+        padding: 10px; font-weight: 700; color: var(--ink-soft);
+      }
+      .end-stats .cell b { display: block; font-size: 1.35rem; color: var(--ink); font-family: "Baloo 2", sans-serif; }
+      .end-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+      .end-btns .big-btn { flex: 1; }
+      .ghost-btn {
+        min-height: 56px; border-radius: 14px; flex: 1;
+        border: 2px solid var(--btn-line); background: var(--btn); color: var(--ink);
+        font-family: "Baloo 2", sans-serif; font-size: 1.1rem; font-weight: 800; padding: 10px 16px;
+      }
+      /* ---------- Touch controls ---------- */
+      .controls {
+        display: none;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .controls .cluster { display: flex; gap: 12px; }
+      .ctl-btn {
+        width: 68px; height: 68px;
+        border-radius: 50%;
+        border: 3px solid var(--btn-line);
+        background: var(--panel);
+        color: var(--ink);
+        font-size: 1.7rem; font-weight: 800;
+        box-shadow: var(--shadow);
+        touch-action: none;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .ctl-btn.jump { width: 80px; height: 80px; background: var(--accent); border-color: var(--accent-dark); color: #fff; font-size: 1rem; font-family: "Baloo 2", sans-serif; }
+      .ctl-btn.pressed { transform: scale(.92); filter: brightness(.94); }
+      @media (pointer: coarse), (max-width: 760px) { .controls { display: flex; } }
+      .kbd-hint { text-align: center; color: var(--ink-soft); font-weight: 600; font-size: .92rem; margin: 0; }
+      @media (pointer: coarse), (max-width: 760px) { .kbd-hint { display: none; } }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <!-- HUD -->
+      <div class="hud" aria-live="polite">
+        <span class="stat hearts" id="hudHearts" title="Mạng">♥♥♥</span>
+        <span class="stat"><span class="coin-dot"></span><span id="hudCoins">0</span></span>
+        <span class="stat">Điểm: <span id="hudScore">0</span></span>
+        <span class="stat" id="hudLevel">Màn 1</span>
+        <span class="spacer"></span>
+        <span class="stat timer" id="hudTimer">⏱ 3:00</span>
+        <button class="icon-btn" id="btnSound" type="button" aria-label="Bật / tắt âm thanh">🔊</button>
+      </div>
+
+      <!-- Stage -->
+      <div class="stage" id="stage">
+        <canvas id="game" width="800" height="500"></canvas>
+
+        <!-- Menu -->
+        <div class="overlay" id="menuOverlay">
+          <svg class="fox-badge" viewBox="0 0 100 100" aria-hidden="true">
+            <polygon points="18,38 30,8 48,30" fill="#e8641c"/>
+            <polygon points="82,38 70,8 52,30" fill="#e8641c"/>
+            <polygon points="24,34 31,18 42,29" fill="#ffd9a8"/>
+            <polygon points="76,34 69,18 58,29" fill="#ffd9a8"/>
+            <circle cx="50" cy="55" r="34" fill="#f07f2e"/>
+            <ellipse cx="50" cy="68" rx="19" ry="14" fill="#fff3e2"/>
+            <circle cx="38" cy="50" r="4.5" fill="#263238"/>
+            <circle cx="62" cy="50" r="4.5" fill="#263238"/>
+            <ellipse cx="50" cy="63" rx="5.5" ry="4" fill="#263238"/>
+            <path d="M50 67 q0 6 -7 7 M50 67 q0 6 7 7" stroke="#263238" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            <rect x="30" y="14" width="40" height="10" rx="5" fill="#2f6db3"/>
+            <rect x="26" y="22" width="48" height="5" rx="2.5" fill="#2f6db3"/>
+          </svg>
+          <h1 class="game-title">Trò Chơi Toán<br />Cáo Nhỏ Săn Điểm</h1>
+          <p class="game-sub">Chạy, nhảy, đập hộp “?” và trả lời câu hỏi Toán 12 để ghi điểm. Chạm tới lá cờ ở cuối màn là qua màn!</p>
+          <div class="card">
+            <div class="topic-row" id="topicRow" role="group" aria-label="Chọn chương">
+              <button type="button" class="topic-btn sel" data-topic="all">Tất cả các chương</button>
+              <button type="button" class="topic-btn" data-topic="daoham">Đạo hàm</button>
+              <button type="button" class="topic-btn" data-topic="logarit">Mũ – Logarit</button>
+              <button type="button" class="topic-btn" data-topic="tichphan">Tích phân</button>
+              <button type="button" class="topic-btn" data-topic="hamso">Hàm số</button>
+            </div>
+            <ul class="howto">
+              <li><b>Di chuyển:</b> nút ◀ ▶ trên màn hình (hoặc phím ← → trên máy tính).</li>
+              <li><b>Nhảy:</b> nút NHẢY (hoặc phím cách). Nhảy đội đầu vào hộp <b>“?”</b> để mở câu hỏi.</li>
+              <li><b>Trả lời đúng:</b> +100 điểm. <b>Trả lời sai:</b> mất 1 tim.</li>
+              <li>Nhảy lên đầu quái để hạ nó (+50 điểm), tránh chạm vào người nó. Rơi xuống hố cũng mất 1 tim.</li>
+            </ul>
+            <button type="button" class="big-btn" id="btnStart">▶ Bắt đầu chơi</button>
+          </div>
+        </div>
+
+        <!-- Question -->
+        <div class="overlay" id="qOverlay" hidden>
+          <div class="card">
+            <span class="q-tag" id="qTag">Đạo hàm</span>
+            <p class="q-text" id="qText"></p>
+            <div class="q-opts" id="qOpts"></div>
+            <p class="q-feedback" id="qFeedback"></p>
+            <button type="button" class="big-btn green" id="btnQNext" hidden>Chạy tiếp ▶</button>
+          </div>
+        </div>
+
+        <!-- End -->
+        <div class="overlay" id="endOverlay" hidden>
+          <div class="card">
+            <div class="end-emoji" id="endEmoji">🏁</div>
+            <p class="end-title" id="endTitle">Qua màn!</p>
+            <div class="end-stats">
+              <div class="cell"><b id="endScore">0</b>Tổng điểm</div>
+              <div class="cell"><b id="endQA">0/0</b>Câu đúng / đã trả lời</div>
+              <div class="cell"><b id="endCoins">0</b>Xu nhặt được</div>
+              <div class="cell"><b id="endTime">0:00</b>Thời gian còn lại</div>
+            </div>
+            <div class="end-btns">
+              <button type="button" class="ghost-btn" id="btnEndMenu">Về màn hình đầu</button>
+              <button type="button" class="big-btn" id="btnEndNext">Chơi tiếp ▶</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Touch controls -->
+      <div class="controls" id="controls">
+        <div class="cluster">
+          <button type="button" class="ctl-btn" id="btnLeft" aria-label="Sang trái">◀</button>
+          <button type="button" class="ctl-btn" id="btnRight" aria-label="Sang phải">▶</button>
+        </div>
+        <button type="button" class="ctl-btn jump" id="btnJump" aria-label="Nhảy">NHẢY</button>
+      </div>
+      <p class="kbd-hint">Trên máy tính: dùng phím ← → (hoặc A / D) để chạy, phím cách (hoặc ↑ / W) để nhảy.</p>
+    </div>
+
+    <script>
+    "use strict";
+    /* ================= QUESTION BANK (Toán 12) ================= */
+    var TOPICS = { daoham: "Đạo hàm", logarit: "Mũ – Logarit", tichphan: "Tích phân", hamso: "Hàm số" };
+    var QUESTIONS = [
+      /* ---- Đạo hàm ---- */
+      { t:"daoham", q:"Đạo hàm của hàm số y = x<sup>3</sup> − 2x + 5 là:", o:["3x<sup>2</sup> − 2","x<sup>2</sup> − 2","3x<sup>2</sup> + 5","3x − 2"], a:0, e:"(x<sup>3</sup>)′ = 3x<sup>2</sup>, (−2x)′ = −2, hằng số 5 có đạo hàm bằng 0." },
+      { t:"daoham", q:"Đạo hàm của hàm số y = sin x là:", o:["cos x","−cos x","−sin x","1 / cos x"], a:0, e:"Công thức cơ bản: (sin x)′ = cos x." },
+      { t:"daoham", q:"Đạo hàm của hàm số y = e<sup>x</sup> là:", o:["e<sup>x</sup>","x·e<sup>x−1</sup>","1 / e<sup>x</sup>","e<sup>x</sup> · ln x"], a:0, e:"Hàm e<sup>x</sup> có đạo hàm bằng chính nó." },
+      { t:"daoham", q:"Đạo hàm của hàm số y = ln x (x &gt; 0) là:", o:["1 / x","x","−1 / x","ln x / x"], a:0, e:"Công thức cơ bản: (ln x)′ = 1/x." },
+      { t:"daoham", q:"Đạo hàm của hàm số y = x·e<sup>x</sup> là:", o:["e<sup>x</sup>(x + 1)","x·e<sup>x</sup>","e<sup>x</sup>","e<sup>x</sup>(x − 1)"], a:0, e:"Dùng quy tắc tích: (x)′·e<sup>x</sup> + x·(e<sup>x</sup>)′ = e<sup>x</sup> + x·e<sup>x</sup> = e<sup>x</sup>(x + 1)." },
+      { t:"daoham", q:"Đạo hàm của hàm số y = (2x + 1)<sup>2</sup> là:", o:["8x + 4","4x + 2","2(2x + 1)","8x"], a:0, e:"y′ = 2(2x + 1)·2 = 4(2x + 1) = 8x + 4." },
+      { t:"daoham", q:"Đạo hàm của hàm số y = cos 2x là:", o:["−2 sin 2x","−sin 2x","2 sin 2x","−2 cos 2x"], a:0, e:"(cos u)′ = −u′·sin u, với u = 2x nên u′ = 2." },
+      { t:"daoham", q:"Đạo hàm của hàm số y = √x (x &gt; 0) là:", o:["1 / (2√x)","2√x","1 / √x","√x / 2"], a:0, e:"√x = x<sup>1/2</sup> nên đạo hàm là (1/2)x<sup>−1/2</sup> = 1/(2√x)." },
+      { t:"daoham", q:"Đạo hàm của hàm số y = 1 / x là:", o:["−1 / x<sup>2</sup>","1 / x<sup>2</sup>","−1 / x","ln x"], a:0, e:"1/x = x<sup>−1</sup> nên đạo hàm là −x<sup>−2</sup> = −1/x<sup>2</sup>." },
+      { t:"daoham", q:"Đạo hàm của hàm số y = x<sup>4</sup> − 3x<sup>2</sup> là:", o:["4x<sup>3</sup> − 6x","4x<sup>3</sup> − 3x","x<sup>3</sup> − 6x","4x<sup>4</sup> − 6x"], a:0, e:"(x<sup>4</sup>)′ = 4x<sup>3</sup> và (−3x<sup>2</sup>)′ = −6x." },
+      /* ---- Mũ – Logarit ---- */
+      { t:"logarit", q:"Giá trị của log<sub>2</sub> 32 là:", o:["5","4","6","16"], a:0, e:"2<sup>5</sup> = 32 nên log<sub>2</sub> 32 = 5." },
+      { t:"logarit", q:"Giá trị của ln e<sup>3</sup> là:", o:["3","e","1","9"], a:0, e:"ln e<sup>3</sup> = 3 · ln e = 3 · 1 = 3." },
+      { t:"logarit", q:"Nghiệm của phương trình 2<sup>x</sup> = 16 là:", o:["x = 4","x = 8","x = 2","x = 16"], a:0, e:"16 = 2<sup>4</sup> nên x = 4." },
+      { t:"logarit", q:"Giá trị của log<sub>3</sub> 9 + log<sub>3</sub> 27 là:", o:["5","6","2","36"], a:0, e:"log<sub>3</sub> 9 = 2 và log<sub>3</sub> 27 = 3, tổng bằng 5." },
+      { t:"logarit", q:"Giá trị của log 1000 (logarit thập phân) là:", o:["3","100","10","2"], a:0, e:"1000 = 10<sup>3</sup> nên log 1000 = 3." },
+      { t:"logarit", q:"Nghiệm của phương trình log<sub>2</sub>(x − 1) = 3 là:", o:["x = 9","x = 7","x = 8","x = 4"], a:0, e:"x − 1 = 2<sup>3</sup> = 8 nên x = 9 (thỏa điều kiện x &gt; 1)." },
+      { t:"logarit", q:"Nghiệm của phương trình 3<sup>x+1</sup> = 27 là:", o:["x = 2","x = 3","x = 1","x = 9"], a:0, e:"27 = 3<sup>3</sup> nên x + 1 = 3, suy ra x = 2." },
+      { t:"logarit", q:"Giá trị của log<sub>5</sub> 125 là:", o:["3","5","25","4"], a:0, e:"5<sup>3</sup> = 125 nên log<sub>5</sub> 125 = 3." },
+      { t:"logarit", q:"Giá trị của ln 1 là:", o:["0","1","e","Không xác định"], a:0, e:"e<sup>0</sup> = 1 nên ln 1 = 0." },
+      { t:"logarit", q:"Giá trị của log<sub>4</sub> 2 là:", o:["1 / 2","2","1 / 4","4"], a:0, e:"4<sup>1/2</sup> = 2 nên log<sub>4</sub> 2 = 1/2." },
+      /* ---- Tích phân ---- */
+      { t:"tichphan", q:"∫ 2x dx bằng:", o:["x<sup>2</sup> + C","2x<sup>2</sup> + C","2 + C","x<sup>2</sup> / 2 + C"], a:0, e:"Nguyên hàm của 2x là x<sup>2</sup> + C (đạo hàm của x<sup>2</sup> là 2x)." },
+      { t:"tichphan", q:"∫ e<sup>x</sup> dx bằng:", o:["e<sup>x</sup> + C","x·e<sup>x</sup> + C","e<sup>x</sup> / x + C","ln x + C"], a:0, e:"Nguyên hàm của e<sup>x</sup> là chính e<sup>x</sup>." },
+      { t:"tichphan", q:"Tích phân ∫<sub>0</sub><sup>1</sup> x dx bằng:", o:["1 / 2","1","0","2"], a:0, e:"[x<sup>2</sup>/2] từ 0 đến 1 = 1/2 − 0 = 1/2." },
+      { t:"tichphan", q:"Nguyên hàm của hàm số f(x) = 1 / x là:", o:["ln|x| + C","−1 / x<sup>2</sup> + C","1 / x + C","ln x + C với mọi x"], a:0, e:"∫ (1/x) dx = ln|x| + C." },
+      { t:"tichphan", q:"∫ cos x dx bằng:", o:["sin x + C","−sin x + C","cos x + C","−cos x + C"], a:0, e:"Đạo hàm của sin x là cos x nên nguyên hàm của cos x là sin x + C." },
+      { t:"tichphan", q:"Tích phân ∫<sub>0</sub><sup>π</sup> sin x dx bằng:", o:["2","0","1","−2"], a:0, e:"[−cos x] từ 0 đến π = (−cos π) − (−cos 0) = 1 + 1 = 2." },
+      { t:"tichphan", q:"∫ 3x<sup>2</sup> dx bằng:", o:["x<sup>3</sup> + C","3x<sup>3</sup> + C","6x + C","x<sup>3</sup> / 3 + C"], a:0, e:"Nguyên hàm của 3x<sup>2</sup> là x<sup>3</sup> + C." },
+      { t:"tichphan", q:"Tích phân ∫<sub>1</sub><sup>e</sup> (1 / x) dx bằng:", o:["1","e","0","ln 2"], a:0, e:"[ln x] từ 1 đến e = ln e − ln 1 = 1 − 0 = 1." },
+      { t:"tichphan", q:"Nguyên hàm của hàm số f(x) = 2<sup>x</sup> là:", o:["2<sup>x</sup> / ln 2 + C","2<sup>x</sup> · ln 2 + C","2<sup>x+1</sup> + C","x · 2<sup>x−1</sup> + C"], a:0, e:"∫ a<sup>x</sup> dx = a<sup>x</sup> / ln a + C, với a = 2." },
+      { t:"tichphan", q:"Tích phân ∫<sub>0</sub><sup>2</sup> 3 dx bằng:", o:["6","3","2","9"], a:0, e:"[3x] từ 0 đến 2 = 6 − 0 = 6." },
+      /* ---- Hàm số ---- */
+      { t:"hamso", q:"Hàm số y = x<sup>3</sup> − 3x đạt cực đại tại điểm:", o:["x = −1","x = 1","x = 0","x = 3"], a:0, e:"y′ = 3x<sup>2</sup> − 3 = 0 tại x = ±1; qua x = −1 đạo hàm đổi dấu từ + sang − nên x = −1 là điểm cực đại." },
+      { t:"hamso", q:"Hàm số y = x<sup>4</sup> − 2x<sup>2</sup> + 1 đồng biến trên khoảng:", o:["(1; +∞)","(−∞; −1)","(0; 1)","(−2; −1)"], a:0, e:"y′ = 4x<sup>3</sup> − 4x = 4x(x<sup>2</sup> − 1) &gt; 0 khi x &gt; 1 (hàm cũng đồng biến trên (−1; 0))." },
+      { t:"hamso", q:"Tiệm cận ngang của đồ thị hàm số y = (2x + 1) / (x − 1) là:", o:["y = 2","y = 1","y = −1","x = 1"], a:0, e:"Khi x → ±∞, y → 2/1 = 2 nên tiệm cận ngang là y = 2." },
+      { t:"hamso", q:"Tiệm cận đứng của đồ thị hàm số y = (2x + 1) / (x − 1) là:", o:["x = 1","x = 2","y = 2","x = −1"], a:0, e:"Mẫu số bằng 0 tại x = 1 và tử số khác 0 nên x = 1 là tiệm cận đứng." },
+      { t:"hamso", q:"Giá trị lớn nhất của hàm số y = −x<sup>2</sup> + 4x trên ℝ là:", o:["4","2","0","8"], a:0, e:"Parabol đạt đỉnh tại x = 2, giá trị y = −4 + 8 = 4." },
+      { t:"hamso", q:"Khẳng định đúng về hàm số y = 2<sup>x</sup> là:", o:["Đồng biến trên ℝ","Nghịch biến trên ℝ","Có cực đại tại x = 0","Có tiệm cận đứng x = 0"], a:0, e:"Cơ số 2 &gt; 1 nên hàm mũ 2<sup>x</sup> đồng biến trên ℝ." },
+      { t:"hamso", q:"Số điểm cực trị của hàm số y = x<sup>4</sup> + 2x<sup>2</sup> + 3 là:", o:["1","0","2","3"], a:0, e:"y′ = 4x<sup>3</sup> + 4x = 4x(x<sup>2</sup> + 1), chỉ đổi dấu tại x = 0 nên có đúng 1 điểm cực trị." },
+      { t:"hamso", q:"Hàm số y = x<sup>3</sup> + 3x<sup>2</sup> + 1 nghịch biến trên khoảng:", o:["(−2; 0)","(0; +∞)","(−∞; −2)","(−1; 1)"], a:0, e:"y′ = 3x<sup>2</sup> + 6x = 3x(x + 2) &lt; 0 khi −2 &lt; x &lt; 0." },
+      { t:"hamso", q:"Đồ thị hàm số y = log<sub>2</sub> x đi qua điểm:", o:["(4; 2)","(2; 4)","(1; 2)","(4; 1)"], a:0, e:"log<sub>2</sub> 4 = 2 nên điểm (4; 2) thuộc đồ thị." },
+      { t:"hamso", q:"Hàm số y = −x<sup>3</sup> + 3x đạt cực tiểu tại điểm:", o:["x = −1","x = 1","x = 0","x = 2"], a:0, e:"y′ = −3x<sup>2</sup> + 3 = 0 tại x = ±1; qua x = −1 đạo hàm đổi dấu từ − sang + nên x = −1 là điểm cực tiểu." }
+    ];
+</script>
+    <script>
+"use strict";
+/* ================= GAME ENGINE ================= */
+var canvas = document.getElementById("game");
+var ctx = canvas.getContext("2d");
+var VW = 800, VH = 500;
+var GRAV = 0.72, MOVE = 3.6, JUMP = -13.4;
+var GROUND_Y = 436, TILE = 44;
+
+var state = "menu";
+var topicSel = "all";
+var levelIdx = 0, hearts = 3, coinsGot = 0, score = 0;
+var qAnswered = 0, qRight = 0;
+var timeLeft = 180;
+var camX = 0, shake = 0;
+var qPool = [], currentQ = null, currentBlock = null;
+var soundOn = true, audioCtx = null;
+var particles = [], floaters = [];
+
+var keys = { left: false, right: false, jump: false, jumpPressed: false };
+var player = { x: 60, y: 300, w: 34, h: 42, vx: 0, vy: 0, face: 1, ground: false, coyote: 0, inv: 0, anim: 0 };
+var level = null;
+
+/* ---------- Level building ---------- */
+function buildLevel(n) {
+  var L = { solids: [], blocks: [], coins: [], enemies: [], flagX: 0, worldW: 0, spawnX: 60, name: "Màn " + (n + 1) };
+  function ground(x, w) { L.solids.push({ x: x, y: GROUND_Y, w: w, h: 200, kind: "ground" }); }
+  function plat(x, y, w) { L.solids.push({ x: x, y: y, w: w, h: 18, kind: "plat" }); }
+  function block(x, y) { var b = { x: x, y: y, w: TILE, h: TILE, kind: "q", used: false, bump: 0 }; L.blocks.push(b); L.solids.push(b); }
+  function coin(x, y) { L.coins.push({ x: x, y: y, got: false, ph: Math.random() * 6.28 }); }
+  function coinRow(x, y, n2) { for (var i = 0; i < n2; i++) coin(x + i * 34, y); }
+  function enemy(x, range) { L.enemies.push({ x: x, y: GROUND_Y - 30, w: 36, h: 30, dir: 1, min: x - range, max: x + range, dead: false, squash: 0 }); }
+
+  if (n === 0) {
+    ground(0, 700); ground(760, 640); ground(1460, 700); ground(2220, 700);
+    block(300, 300); block(880, 300); block(1620, 300); block(2380, 300);
+    plat(520, 340, 110); plat(1080, 330, 110); plat(1300, 250, 110); plat(1900, 330, 110); plat(2560, 330, 110);
+    block(1330, 160);
+    coinRow(520, 300, 3); coinRow(1080, 290, 3); coinRow(1900, 290, 3); coinRow(150, 396, 4); coinRow(2300, 396, 3);
+    enemy(1050, 90); enemy(2000, 110);
+    L.flagX = 2780; L.worldW = 2920;
+  } else if (n === 1) {
+    ground(0, 560); ground(640, 520); ground(1240, 560); ground(1880, 520); ground(2480, 640);
+    block(240, 300); block(760, 290); block(1420, 300); block(2060, 290); block(2720, 300);
+    plat(420, 330, 100); plat(980, 320, 100); plat(1120, 240, 100); plat(1620, 320, 100); plat(2260, 320, 100); plat(2400, 240, 100);
+    block(1150, 150);
+    coinRow(420, 290, 3); coinRow(1120, 200, 3); coinRow(2260, 280, 3); coinRow(100, 396, 4); coinRow(2600, 396, 3);
+    enemy(820, 80); enemy(1500, 100); enemy(2150, 90); enemy(2700, 110);
+    L.flagX = 2980; L.worldW = 3120;
+  } else {
+    ground(0, 500); ground(580, 440); ground(1100, 500); ground(1680, 440); ground(2200, 500); ground(2780, 560);
+    block(200, 300); block(680, 290); block(1240, 300); block(1780, 290); block(2340, 300); block(2920, 300);
+    plat(360, 330, 96); plat(880, 315, 96); plat(1010, 230, 96); plat(1460, 315, 96); plat(1980, 315, 96); plat(2110, 230, 96); plat(2560, 315, 96);
+    block(1040, 140); block(2140, 140);
+    coinRow(360, 290, 3); coinRow(1010, 190, 3); coinRow(2110, 190, 3); coinRow(80, 396, 3); coinRow(2860, 396, 3);
+    enemy(700, 70); enemy(1300, 90); enemy(1850, 80); enemy(2400, 100); enemy(2950, 90);
+    L.flagX = 3200; L.worldW = 3340;
+  }
+  return L;
+}
+
+/* ---------- Questions ---------- */
+function shuffle(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+  return a;
+}
+function makePool() {
+  var list = QUESTIONS.filter(function (q) { return topicSel === "all" || q.t === topicSel; });
+  qPool = shuffle(list);
+}
+function nextQuestion() {
+  if (!qPool.length) makePool();
+  return qPool.pop();
+}
+
+/* ---------- Sound ---------- */
+function beep(freq, dur, type, vol, when) {
+  if (!soundOn) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    var t0 = audioCtx.currentTime + (when || 0);
+    var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type || "square"; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || 0.06, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t0); o.stop(t0 + dur);
+  } catch (e) { /* no audio */ }
+}
+function sfx(name) {
+  if (name === "jump") { beep(300, 0.14, "square", 0.045); beep(560, 0.12, "square", 0.04, 0.05); }
+  else if (name === "coin") { beep(990, 0.08, "square", 0.05); beep(1320, 0.16, "square", 0.05, 0.07); }
+  else if (name === "right") { beep(660, 0.1, "triangle", 0.07); beep(880, 0.1, "triangle", 0.07, 0.09); beep(1100, 0.18, "triangle", 0.07, 0.18); }
+  else if (name === "wrong") { beep(220, 0.2, "sawtooth", 0.06); beep(160, 0.28, "sawtooth", 0.06, 0.12); }
+  else if (name === "stomp") beep(180, 0.12, "square", 0.06);
+  else if (name === "hurt") { beep(340, 0.15, "sawtooth", 0.06); beep(200, 0.22, "sawtooth", 0.06, 0.1); }
+  else if (name === "win") { [523, 659, 784, 1047].forEach(function (f, i) { beep(f, 0.16, "triangle", 0.07, i * 0.11); }); }
+}
+
+/* ---------- HUD ---------- */
+var hudHearts = document.getElementById("hudHearts"), hudCoins = document.getElementById("hudCoins"),
+    hudScore = document.getElementById("hudScore"), hudLevel = document.getElementById("hudLevel"),
+    hudTimer = document.getElementById("hudTimer");
+function fmtTime(s) { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
+function updateHUD() {
+  var h = "";
+  for (var i = 0; i < 3; i++) h += i < hearts ? "♥" : '<span class="off">♥</span>';
+  hudHearts.innerHTML = h;
+  hudCoins.textContent = coinsGot;
+  hudScore.textContent = score;
+  hudLevel.textContent = "Màn " + (levelIdx + 1) + " / 3";
+  hudTimer.textContent = "⏱ " + fmtTime(timeLeft);
+  hudTimer.classList.toggle("low", timeLeft <= 30 && state === "play");
+}
+
+/* ---------- Game flow ---------- */
+var menuOverlay = document.getElementById("menuOverlay"),
+    qOverlay = document.getElementById("qOverlay"),
+    endOverlay = document.getElementById("endOverlay");
+
+function startGame() {
+  levelIdx = 0; hearts = 3; coinsGot = 0; score = 0; qAnswered = 0; qRight = 0;
+  makePool();
+  loadLevel(0);
+  menuOverlay.hidden = true; endOverlay.hidden = true;
+  state = "play";
+}
+function loadLevel(n) {
+  level = buildLevel(n);
+  player.x = level.spawnX; player.y = GROUND_Y - player.h - 2;
+  player.vx = 0; player.vy = 0; player.inv = 0; player.face = 1;
+  camX = 0; timeLeft = 180; particles = []; floaters = [];
+  updateHUD();
+}
+function endLevel() {
+  var bonus = Math.ceil(timeLeft) * 2;
+  score += bonus;
+  sfx("win");
+  state = "end";
+  showEnd("🏁", levelIdx >= 2 ? "Hoàn thành cả 3 màn!" : "Qua màn " + (levelIdx + 1) + "!",
+    levelIdx >= 2 ? "restart" : "next",
+    levelIdx >= 2 ? "Chơi lại từ đầu" : "Màn tiếp theo ▶", bonus);
+}
+function gameOver(reason) {
+  sfx("wrong");
+  state = "end";
+  showEnd("💔", reason || "Hết tim rồi!", "restart", "Chơi lại từ đầu", 0);
+}
+function showEnd(emoji, title, mode, nextLabel, bonus) {
+  document.getElementById("endEmoji").textContent = emoji;
+  document.getElementById("endTitle").textContent = title + (bonus ? " (thưởng thời gian +" + bonus + ")" : "");
+  document.getElementById("endScore").textContent = score;
+  document.getElementById("endQA").textContent = qRight + "/" + qAnswered;
+  document.getElementById("endCoins").textContent = coinsGot;
+  document.getElementById("endTime").textContent = fmtTime(timeLeft);
+  var btn = document.getElementById("btnEndNext");
+  btn.textContent = nextLabel;
+  btn.dataset.mode = mode;
+  endOverlay.hidden = false;
+  updateHUD();
+}
+
+/* ---------- Question overlay ---------- */
+var qTag = document.getElementById("qTag"), qText = document.getElementById("qText"),
+    qOpts = document.getElementById("qOpts"), qFeedback = document.getElementById("qFeedback"),
+    btnQNext = document.getElementById("btnQNext");
+function openQuestion(block) {
+  currentBlock = block;
+  currentQ = nextQuestion();
+  state = "question";
+  qTag.textContent = TOPICS[currentQ.t];
+  qText.innerHTML = currentQ.q;
+  qFeedback.className = "q-feedback"; qFeedback.innerHTML = "";
+  btnQNext.hidden = true;
+  qOpts.innerHTML = "";
+  var order = shuffle(currentQ.o.map(function (_, i) { return i; }));
+  var letters = ["A", "B", "C", "D"];
+  order.forEach(function (oi, pos) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "opt-btn";
+    b.dataset.oi = oi;
+    b.innerHTML = '<span class="letter">' + letters[pos] + '</span><span>' + currentQ.o[oi] + "</span>";
+    b.addEventListener("click", function () { answer(oi, b); });
+    qOpts.appendChild(b);
+  });
+  qOverlay.hidden = false;
+}
+function answer(oi, btn) {
+  var right = oi === currentQ.a;
+  qAnswered++;
+  var btns = qOpts.querySelectorAll(".opt-btn");
+  btns.forEach(function (b) {
+    b.disabled = true;
+    if (Number(b.dataset.oi) === currentQ.a) b.classList.add("right");
+  });
+  if (right) {
+    qRight++; score += 100; coinsGot += 1;
+    sfx("right");
+    qFeedback.innerHTML = '<span class="ok">Đúng rồi! +100 điểm.</span> ' + currentQ.e;
+    burst(player.x + player.w / 2, player.y, "#f5b921");
+    addFloater(player.x, player.y - 14, "+100", "#2e9e4f");
+  } else {
+    btn.classList.add("wrong");
+    hearts--; shake = 10;
+    sfx("wrong");
+    qFeedback.innerHTML = '<span class="no">Chưa đúng — mất 1 tim.</span> ' + currentQ.e;
+  }
+  qFeedback.classList.add("show");
+  btnQNext.hidden = false;
+  updateHUD();
+}
+btnQNext.addEventListener("click", function () {
+  qOverlay.hidden = true;
+  if (hearts <= 0) { gameOver("Hết tim rồi!"); return; }
+  state = "play";
+});
+
+/* ---------- Particles / floaters ---------- */
+function burst(x, y, color) {
+  for (var i = 0; i < 14; i++) {
+    particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 5, vy: -Math.random() * 5 - 1, life: 34, color: color, r: 2 + Math.random() * 3 });
+  }
+}
+function addFloater(x, y, text, color) { floaters.push({ x: x, y: y, text: text, color: color, life: 55 }); }
+
+/* ---------- Physics & update ---------- */
+function overlap(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+
+function hurtPlayer(fromX) {
+  if (player.inv > 0 || state !== "play") return;
+  hearts--; player.inv = 90; shake = 10;
+  player.vy = -8; player.vx = (player.x < fromX ? -4 : 4);
+  sfx("hurt");
+  updateHUD();
+  if (hearts <= 0) gameOver("Hết tim rồi!");
+}
+
+function update(dt) {
+  timeLeft -= dt / 60;
+  if (timeLeft <= 0) {
+    timeLeft = 0;
+    hearts--;
+    updateHUD();
+    if (hearts <= 0) { gameOver("Hết giờ và hết tim!"); return; }
+    sfx("hurt");
+    loadLevel(levelIdx);
+    addFloater(player.x, player.y - 20, "Hết giờ! -1 tim, chơi lại màn", "#d93b3b");
+    return;
+  }
+
+  var ax = 0;
+  if (keys.left) ax -= 1;
+  if (keys.right) ax += 1;
+  player.vx = ax * MOVE;
+  if (ax !== 0) { player.face = ax; player.anim += dt * 0.35; }
+  if (player.ground) player.coyote = 7; else if (player.coyote > 0) player.coyote -= dt;
+  if (keys.jumpPressed && (player.ground || player.coyote > 0)) {
+    player.vy = JUMP; player.ground = false; player.coyote = 0; sfx("jump");
+  }
+  keys.jumpPressed = false;
+  player.vy += GRAV * dt;
+  if (player.vy > 16) player.vy = 16;
+  if (player.inv > 0) player.inv -= dt;
+
+  /* X move + collide */
+  player.x += player.vx * dt;
+  level.solids.forEach(function (s) {
+    if (overlap(player, s)) {
+      if (player.vx > 0) player.x = s.x - player.w;
+      else if (player.vx < 0) player.x = s.x + s.w;
+    }
+  });
+  if (player.x < 0) player.x = 0;
+  if (player.x > level.worldW - player.w) player.x = level.worldW - player.w;
+
+  /* Y move + collide */
+  player.y += player.vy * dt;
+  player.ground = false;
+  level.solids.forEach(function (s) {
+    if (overlap(player, s)) {
+      if (player.vy > 0 && player.y + player.h - player.vy * dt <= s.y + 10) {
+        player.y = s.y - player.h; player.vy = 0; player.ground = true;
+      } else if (player.vy < 0) {
+        player.y = s.y + s.h; player.vy = 0;
+        if (s.kind === "q" && !s.used) {
+          s.used = true; s.bump = 10;
+          openQuestion(s);
+        }
+      }
+    }
+  });
+
+  /* fell into a pit */
+  if (player.y > VH + 260) {
+    hearts--; updateHUD();
+    if (hearts <= 0) { gameOver("Hết tim rồi!"); return; }
+    sfx("hurt");
+    player.x = Math.max(level.spawnX, player.x - 260); player.y = 120; player.vy = 0; player.inv = 60;
+  }
+
+  /* coins */
+  level.coins.forEach(function (c) {
+    if (c.got) return;
+    var dx = (player.x + player.w / 2) - c.x, dy = (player.y + player.h / 2) - c.y;
+    if (dx * dx + dy * dy < 32 * 32) {
+      c.got = true; coinsGot++; score += 10; sfx("coin");
+      addFloater(c.x - 8, c.y - 18, "+10", "#d99a06");
+    }
+  });
+
+  /* enemies */
+  level.enemies.forEach(function (en) {
+    if (en.dead) { if (en.squash > 0) en.squash -= dt; return; }
+    en.x += en.dir * 0.9 * dt;
+    if (en.x < en.min) { en.x = en.min; en.dir = 1; }
+    if (en.x > en.max) { en.x = en.max; en.dir = -1; }
+    if (state === "play" && overlap(player, en)) {
+      var stomp = player.vy > 1.5 && (player.y + player.h) - en.y < 20;
+      if (stomp) {
+        en.dead = true; en.squash = 22; player.vy = -9; score += 50; sfx("stomp");
+        addFloater(en.x, en.y - 16, "+50", "#2e9e4f");
+        burst(en.x + en.w / 2, en.y + 10, "#8e6cc8");
+      } else {
+        hurtPlayer(en.x + en.w / 2);
+      }
+    }
+  });
+
+  /* flag */
+  if (state === "play" && player.x + player.w >= level.flagX) { endLevel(); return; }
+
+  /* camera */
+  var target = player.x + player.w / 2 - VW * 0.42;
+  camX += (target - camX) * 0.12;
+  if (camX < 0) camX = 0;
+  if (camX > level.worldW - VW) camX = level.worldW - VW;
+
+  particles = particles.filter(function (p) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 0.25 * dt; p.life -= dt; return p.life > 0; });
+  floaters = floaters.filter(function (f) { f.y -= 0.7 * dt; f.life -= dt; return f.life > 0; });
+  level.blocks.forEach(function (b) { if (b.bump > 0) b.bump -= dt; });
+  if (shake > 0) shake -= dt;
+  updateHUD();
+}
+
+/* ---------- Drawing ---------- */
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function drawFox(x, y, w, h) {
+  var cx = x + w / 2, cy = y + h / 2;
+  var bob = player.ground && (keys.left || keys.right) ? Math.sin(player.anim) * 2 : 0;
+  ctx.save();
+  ctx.translate(cx, cy + bob);
+  ctx.scale(player.face, 1);
+  if (player.inv > 0 && Math.floor(player.inv / 4) % 2 === 0) ctx.globalAlpha = 0.45;
+  ctx.fillStyle = "#e8641c";
+  ctx.beginPath(); ctx.ellipse(-w * 0.52, h * 0.18, w * 0.3, h * 0.16, -0.5, 0, 6.29); ctx.fill();
+  ctx.fillStyle = "#fff3e2";
+  ctx.beginPath(); ctx.ellipse(-w * 0.68, h * 0.1, w * 0.13, h * 0.08, -0.5, 0, 6.29); ctx.fill();
+  ctx.fillStyle = "#f07f2e";
+  ctx.beginPath(); ctx.ellipse(0, h * 0.16, w * 0.42, h * 0.34, 0, 0, 6.29); ctx.fill();
+  ctx.fillStyle = "#fff3e2";
+  ctx.beginPath(); ctx.ellipse(w * 0.08, h * 0.22, w * 0.2, h * 0.2, 0, 0, 6.29); ctx.fill();
+  ctx.fillStyle = "#263238";
+  var step = player.ground && (keys.left || keys.right) ? Math.sin(player.anim) * 5 : 0;
+  ctx.beginPath(); ctx.ellipse(-w * 0.18 + step, h * 0.5, w * 0.14, h * 0.08, 0, 0, 6.29); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(w * 0.2 - step, h * 0.5, w * 0.14, h * 0.08, 0, 0, 6.29); ctx.fill();
+  ctx.fillStyle = "#e8641c";
+  ctx.beginPath(); ctx.moveTo(-w * 0.34, -h * 0.28); ctx.lineTo(-w * 0.26, -h * 0.58); ctx.lineTo(-w * 0.06, -h * 0.36); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(w * 0.34, -h * 0.28); ctx.lineTo(w * 0.26, -h * 0.58); ctx.lineTo(w * 0.06, -h * 0.36); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#f07f2e";
+  ctx.beginPath(); ctx.arc(0, -h * 0.18, w * 0.4, 0, 6.29); ctx.fill();
+  ctx.fillStyle = "#fff3e2";
+  ctx.beginPath(); ctx.ellipse(w * 0.05, -h * 0.05, w * 0.22, h * 0.15, 0, 0, 6.29); ctx.fill();
+  ctx.fillStyle = "#2f6db3";
+  ctx.beginPath(); ctx.arc(0, -h * 0.3, w * 0.4, 3.35, 6.08); ctx.fill();
+  ctx.fillRect(w * 0.05, -h * 0.33, w * 0.48, h * 0.09);
+  ctx.fillStyle = "#263238";
+  ctx.beginPath(); ctx.arc(w * 0.16, -h * 0.2, 3.2, 0, 6.29); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(w * 0.24, -h * 0.07, 4, 3, 0, 0, 6.29); ctx.fill();
+  ctx.restore();
+}
+function drawSlime(en) {
+  var x = en.x - camX, y = en.y;
+  ctx.save();
+  ctx.translate(camX, 0);
+  if (en.dead) { ctx.globalAlpha = Math.max(0, en.squash / 22); }
+  var squashK = en.dead ? 0.35 : 1;
+  ctx.fillStyle = "#7a4fd0";
+  ctx.beginPath();
+  ctx.moveTo(x + 3, y + en.h);
+  ctx.quadraticCurveTo(x + 2, y + en.h - en.h * squashK + 2, x + en.w / 2, y + en.h - en.h * squashK);
+  ctx.quadraticCurveTo(x + en.w - 2, y + en.h - en.h * squashK + 2, x + en.w - 3, y + en.h);
+  ctx.closePath(); ctx.fill();
+  if (!en.dead) {
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(x + en.w * 0.36, y + en.h * 0.45, 5, 0, 6.29); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + en.w * 0.64, y + en.h * 0.45, 5, 0, 6.29); ctx.fill();
+    ctx.fillStyle = "#263238";
+    ctx.beginPath(); ctx.arc(x + en.w * 0.36 + en.dir * 2, y + en.h * 0.45, 2.4, 0, 6.29); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + en.w * 0.64 + en.dir * 2, y + en.h * 0.45, 2.4, 0, 6.29); ctx.fill();
+  }
+  ctx.restore();
+}
+function draw() {
+  var sky = ctx.createLinearGradient(0, 0, 0, VH);
+  sky.addColorStop(0, "#6ec1f5"); sky.addColorStop(0.75, "#bfe6fb"); sky.addColorStop(1, "#dff4fd");
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, VW, VH);
+  ctx.fillStyle = "rgba(255,217,77,.35)";
+  ctx.beginPath(); ctx.arc(VW - 84, 66, 44, 0, 6.29); ctx.fill();
+  ctx.fillStyle = "#ffd94d";
+  ctx.beginPath(); ctx.arc(VW - 84, 66, 30, 0, 6.29); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,.92)";
+  for (var i = 0; i < 8; i++) {
+    var cxp = ((i * 340 + 60) - camX * 0.35) % (VW + 220); if (cxp < -110) cxp += VW + 220;
+    var cyp = 44 + (i % 3) * 38;
+    ctx.beginPath();
+    ctx.ellipse(cxp, cyp, 42, 15, 0, 0, 6.29); ctx.ellipse(cxp + 26, cyp + 3, 30, 12, 0, 0, 6.29); ctx.ellipse(cxp - 28, cyp + 4, 26, 11, 0, 0, 6.29);
+    ctx.fill();
+  }
+  ctx.fillStyle = "#9ed08a";
+  for (var h2 = 0; h2 < 6; h2++) {
+    var hx = ((h2 * 420 + 40) - camX * 0.55) % (VW + 460); if (hx < -230) hx += VW + 460;
+    ctx.beginPath(); ctx.ellipse(hx, GROUND_Y + 66, 230, 108, 0, 3.14, 6.29); ctx.fill();
+  }
+
+  ctx.save();
+  if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+  ctx.translate(-camX, 0);
+
+  level.solids.forEach(function (s) {
+    if (s.kind === "q") return;
+    if (s.x + s.w < camX - 60 || s.x > camX + VW + 60) return;
+    if (s.kind === "ground") {
+      ctx.fillStyle = "#8a5a33"; ctx.fillRect(s.x, s.y + 16, s.w, s.h);
+      ctx.fillStyle = "#57a639"; ctx.fillRect(s.x, s.y, s.w, 20);
+      ctx.fillStyle = "#6cbf4e"; ctx.fillRect(s.x, s.y, s.w, 7);
+      ctx.fillStyle = "rgba(0,0,0,.12)";
+      for (var gx = s.x + 22; gx < s.x + s.w - 10; gx += 74) ctx.fillRect(gx, s.y + 52 + ((gx * 7) % 40), 16, 9);
+    } else if (s.kind === "plat") {
+      ctx.fillStyle = "#c98d4b"; ctx.fillRect(s.x, s.y, s.w, s.h);
+      ctx.fillStyle = "#e8b06a"; ctx.fillRect(s.x, s.y, s.w, 6);
+      ctx.fillStyle = "rgba(0,0,0,.15)"; ctx.fillRect(s.x, s.y + s.h - 4, s.w, 4);
+    }
+  });
+  level.blocks.forEach(function (b) {
+    if (b.x + b.w < camX - 60 || b.x > camX + VW + 60) return;
+    var by = b.y - (b.bump > 0 ? Math.sin((10 - b.bump) / 10 * 3.14) * 9 : 0);
+    ctx.fillStyle = b.used ? "#b08954" : "#f5a623";
+    ctx.strokeStyle = b.used ? "#8a6a3c" : "#c77f0a"; ctx.lineWidth = 3;
+    roundRect(b.x, by, b.w, b.h, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,.35)";
+    [[6, 6], [b.w - 10, 6], [6, b.h - 10], [b.w - 10, b.h - 10]].forEach(function (p) { ctx.fillRect(b.x + p[0], by + p[1], 4, 4); });
+    ctx.fillStyle = "#fff";
+    ctx.font = "800 26px 'Baloo 2', sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(b.used ? "✓" : "?", b.x + b.w / 2, by + b.h / 2 + 1);
+  });
+  var now = performance.now() / 300;
+  level.coins.forEach(function (c) {
+    if (c.got || c.x < camX - 40 || c.x > camX + VW + 40) return;
+    var sq = Math.abs(Math.sin(now + c.ph));
+    ctx.save(); ctx.translate(c.x, c.y + Math.sin(now + c.ph) * 3); ctx.scale(0.35 + 0.65 * sq, 1);
+    ctx.fillStyle = "#f5b921"; ctx.strokeStyle = "#d99a06"; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(0, 0, 11, 0, 6.29); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#d99a06"; ctx.font = "800 12px 'Baloo 2', sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("đ", 0, 1);
+    ctx.restore();
+  });
+  var fx = level.flagX;
+  ctx.fillStyle = "#8a8f98"; ctx.fillRect(fx, GROUND_Y - 210, 6, 210);
+  ctx.fillStyle = "#2e9e4f";
+  ctx.beginPath(); ctx.moveTo(fx + 6, GROUND_Y - 210); ctx.lineTo(fx + 58, GROUND_Y - 190); ctx.lineTo(fx + 6, GROUND_Y - 168); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#f5b921"; ctx.beginPath(); ctx.arc(fx + 3, GROUND_Y - 214, 6, 0, 6.29); ctx.fill();
+  level.enemies.forEach(function (en) { if (!en.dead || en.squash > 0) drawSlime(en); });
+  drawFox(player.x, player.y, player.w, player.h);
+  particles.forEach(function (p) { ctx.globalAlpha = Math.max(0, p.life / 34); ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.29); ctx.fill(); });
+  ctx.globalAlpha = 1;
+  ctx.font = "800 17px 'Baloo 2', sans-serif"; ctx.textAlign = "center";
+  floaters.forEach(function (f) { ctx.globalAlpha = Math.max(0, f.life / 55); ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y); });
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+/* ---------- Main loop ---------- */
+var lastTime = 0;
+function loop(ts) {
+  requestAnimationFrame(loop);
+  if (!lastTime) lastTime = ts;
+  var dt = Math.min(3, (ts - lastTime) / 16.667);
+  lastTime = ts;
+  if (state === "play") update(dt);
+  if (level) draw();
+}
+
+/* ---------- Canvas sizing ---------- */
+function fitCanvas() {
+  var dpr = Math.min(2, window.devicePixelRatio || 1);
+  var rect = canvas.getBoundingClientRect();
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(rect.width * (VH / VW) * dpr);
+  ctx.setTransform(canvas.width / VW, 0, 0, canvas.width / VW, 0, 0);
+}
+window.addEventListener("resize", fitCanvas);
+
+/* ---------- Input: keyboard ---------- */
+window.addEventListener("keydown", function (e) {
+  if (e.code === "ArrowLeft" || e.code === "KeyA") { keys.left = true; e.preventDefault(); }
+  else if (e.code === "ArrowRight" || e.code === "KeyD") { keys.right = true; e.preventDefault(); }
+  else if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") { if (!keys.jump) keys.jumpPressed = true; keys.jump = true; e.preventDefault(); }
+});
+window.addEventListener("keyup", function (e) {
+  if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = false;
+  else if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = false;
+  else if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") keys.jump = false;
+});
+
+/* ---------- Input: touch buttons ---------- */
+function bindHold(id, prop) {
+  var el = document.getElementById(id);
+  function on(e) { e.preventDefault(); keys[prop] = true; if (prop === "jump") keys.jumpPressed = true; el.classList.add("pressed"); }
+  function off(e) { if (e) e.preventDefault(); keys[prop] = false; el.classList.remove("pressed"); }
+  el.addEventListener("pointerdown", on);
+  el.addEventListener("pointerup", off);
+  el.addEventListener("pointerleave", off);
+  el.addEventListener("pointercancel", off);
+  el.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+}
+bindHold("btnLeft", "left");
+bindHold("btnRight", "right");
+bindHold("btnJump", "jump");
+
+/* ---------- UI wiring ---------- */
+document.getElementById("topicRow").addEventListener("click", function (e) {
+  var b = e.target.closest(".topic-btn"); if (!b) return;
+  topicSel = b.dataset.topic;
+  this.querySelectorAll(".topic-btn").forEach(function (x) { x.classList.toggle("sel", x === b); });
+});
+document.getElementById("btnStart").addEventListener("click", function () { sfx("coin"); startGame(); });
+document.getElementById("btnEndMenu").addEventListener("click", function () {
+  endOverlay.hidden = true; menuOverlay.hidden = false; state = "menu";
+  level = buildLevel(0); player.x = 60; player.y = GROUND_Y - player.h - 2; player.vx = 0; player.vy = 0; camX = 0;
+});
+document.getElementById("btnEndNext").addEventListener("click", function () {
+  var mode = this.dataset.mode; this.dataset.mode = "";
+  endOverlay.hidden = true;
+  if (mode === "next" && levelIdx < 2) { levelIdx++; loadLevel(levelIdx); state = "play"; }
+  else startGame();
+});
+document.getElementById("btnSound").addEventListener("click", function () {
+  soundOn = !soundOn;
+  this.textContent = soundOn ? "🔊" : "🔇";
+  if (soundOn) sfx("coin");
+});
+
+/* ---------- Boot ---------- */
+level = buildLevel(0);
+player.y = GROUND_Y - player.h - 2;
+fitCanvas();
+updateHUD();
+requestAnimationFrame(loop);
+
+    </script>
+  </body>
+</html>
