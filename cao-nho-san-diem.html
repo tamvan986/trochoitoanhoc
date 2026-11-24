@@ -258,6 +258,24 @@
       @media (pointer: coarse), (max-width: 760px) { .controls { display: flex; } }
       .kbd-hint { text-align: center; color: var(--ink-soft); font-weight: 600; font-size: .92rem; margin: 0; }
       @media (pointer: coarse), (max-width: 760px) { .kbd-hint { display: none; } }
+      /* ---------- Toàn màn hình (nút ⛶): Fullscreen API thật; iPhone Safari thì dùng chế độ giả ---------- */
+      .gamefs:fullscreen, .gamefs:-webkit-full-screen { position: relative; display: block; width: 100vw; height: 100dvh; max-width: none; margin: 0; padding: 0; background: #0a1e30; box-sizing: border-box; }
+      .gamefs:fullscreen .stage, .gamefs:-webkit-full-screen .stage { position: absolute; inset: 0; border: 0; border-radius: 0; }
+      .gamefs:fullscreen canvas#game, .gamefs:-webkit-full-screen canvas#game { height: 100%; width: 100%; aspect-ratio: auto; object-fit: contain; }
+      .gamefs:fullscreen .hud, .gamefs:-webkit-full-screen .hud { position: absolute; top: 0; left: 0; right: 0; z-index: 5; border-radius: 0; border-left: 0; border-right: 0; border-top: 0; }
+      .gamefs:fullscreen .controls, .gamefs:-webkit-full-screen .controls { position: absolute; bottom: 10px; left: 10px; right: 10px; z-index: 5; }
+      .gamefs:fullscreen .kbd-hint, .gamefs:-webkit-full-screen .kbd-hint { display: none; }
+      .gamefs.fs-fake { position: fixed; inset: 0; display: block; max-width: none; margin: 0; padding: 0; background: #0a1e30; z-index: 9999; box-sizing: border-box; }
+      .gamefs.fs-fake .stage { position: absolute; inset: 0; border: 0; border-radius: 0; }
+      .gamefs.fs-fake canvas#game { height: 100%; width: 100%; aspect-ratio: auto; object-fit: contain; }
+      .gamefs.fs-fake .hud { position: absolute; top: 0; left: 0; right: 0; z-index: 5; border-radius: 0; border-left: 0; border-right: 0; border-top: 0; }
+      .gamefs.fs-fake .controls { position: absolute; bottom: 10px; left: 10px; right: 10px; z-index: 5; }
+      .gamefs.fs-fake .kbd-hint { display: none; }
+      .fs-hint { position: absolute; top: 52px; left: 10px; background: rgba(0,0,0,.78); color: #ffe9c9; font-weight: 800; font-size: 15px; padding: 9px 16px; border-radius: 999px; z-index: 70; display: none; white-space: nowrap; cursor: pointer; max-width: calc(100% - 110px); overflow: hidden; text-overflow: ellipsis; }
+      .gamefs:fullscreen .fs-hint.show, .gamefs:-webkit-full-screen .fs-hint.show, .gamefs.fs-fake .fs-hint.show { display: block; }
+      @media (orientation: landscape) { .fs-hint { display: none !important; } }
+      .fs-exit { display: none; position: absolute; top: 52px; right: 10px; z-index: 71; background: rgba(0,0,0,.7); color: #fff; border: 1.5px solid rgba(255,255,255,.45); border-radius: 999px; padding: 8px 14px; font-weight: 800; font-size: 14px; cursor: pointer; }
+      .gamefs:fullscreen .fs-exit, .gamefs:-webkit-full-screen .fs-exit, .gamefs.fs-fake .fs-exit { display: block; }
     </style>
   </head>
   <body>
@@ -271,11 +289,14 @@
         <span class="spacer"></span>
         <span class="stat timer" id="hudTimer">⏱ 3:00</span>
         <button class="icon-btn" id="btnSound" type="button" aria-label="Bật / tắt âm thanh">🔊</button>
+        <button class="icon-btn" id="fsBtn" type="button" aria-label="Toàn màn hình">⛶</button>
       </div>
 
       <!-- Stage -->
       <div class="stage" id="stage">
         <canvas id="game" width="800" height="500"></canvas>
+        <div class="fs-hint" id="fsHint">📱 Xoay ngang để chơi lớn nhất</div>
+        <button class="fs-exit" id="fsExitBtn" type="button">✕ Thoát</button>
 
         <!-- Menu -->
         <div class="overlay" id="menuOverlay">
@@ -310,6 +331,7 @@
               <li>Nhảy lên đầu quái để hạ nó (+50 điểm), tránh chạm vào người nó. Rơi xuống hố cũng mất 1 tim.</li>
             </ul>
             <button type="button" class="big-btn" id="btnStart">▶ Bắt đầu chơi</button>
+            <button type="button" class="big-btn" id="fsBtnMenu" style="margin-top:10px">⛶ Chơi toàn màn hình</button>
           </div>
         </div>
 
@@ -965,6 +987,63 @@ document.getElementById("btnSound").addEventListener("click", function () {
   this.textContent = soundOn ? "🔊" : "🔇";
   if (soundOn) sfx("coin");
 });
+
+/* ---------- Toàn màn hình (nút ⛶): Fullscreen API thật; iPhone Safari dùng chế độ giả ---------- */
+(function () {
+  var GAME = document.querySelector(".wrap"); // khung chứa HUD + sân chơi + nút bấm
+  var fsBtn = document.getElementById("fsBtn");
+  var fsBtnMenu = document.getElementById("fsBtnMenu");
+  var fsHint = document.getElementById("fsHint");
+  var fsExit = document.getElementById("fsExitBtn");
+  if (!GAME || (!fsBtn && !fsBtnMenu)) return;
+  GAME.classList.add("gamefs");
+  function fsSupported() { return !!(GAME.requestFullscreen || GAME.webkitRequestFullscreen); }
+  function syncFsUI() {
+    var on = !!document.fullscreenElement || GAME.classList.contains("fs-fake");
+    if (fsBtn) { fsBtn.textContent = on ? "✕" : "⛶"; fsBtn.setAttribute("aria-label", on ? "Thoát toàn màn hình" : "Toàn màn hình"); }
+    if (fsBtnMenu) fsBtnMenu.textContent = on ? "✕ Thoát toàn màn hình" : "⛶ Chơi toàn màn hình";
+    if (fsHint) {
+      if (on && window.matchMedia("(orientation: portrait)").matches) fsHint.classList.add("show");
+      else fsHint.classList.remove("show");
+    }
+  }
+  function hideFsHint() { if (fsHint) fsHint.classList.remove("show"); }
+  function refit() { if (typeof fitCanvas === "function") fitCanvas(); }
+  function sizeFakeFS() {
+    var vv = window.visualViewport;
+    var w = vv ? vv.width : window.innerWidth, h = vv ? vv.height : window.innerHeight;
+    GAME.style.left = "0px"; GAME.style.top = "0px"; GAME.style.width = w + "px"; GAME.style.height = h + "px";
+    refit();
+  }
+  function enterFakeFS() {
+    GAME.classList.add("fs-fake"); sizeFakeFS(); document.body.style.overflow = "hidden";
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", sizeFakeFS);
+    syncFsUI();
+  }
+  function enterFS() {
+    if (fsSupported()) {
+      var pr = GAME.requestFullscreen ? GAME.requestFullscreen({ navigationUI: "hide" }) : GAME.webkitRequestFullscreen();
+      if (pr && pr.catch) pr.catch(function () { enterFakeFS(); });
+    } else enterFakeFS();
+    try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(function () {}); } catch (e) {}
+    setTimeout(hideFsHint, 5000);
+  }
+  function exitFS() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    GAME.classList.remove("fs-fake");
+    GAME.style.left = ""; GAME.style.top = ""; GAME.style.width = ""; GAME.style.height = "";
+    if (window.visualViewport) window.visualViewport.removeEventListener("resize", sizeFakeFS);
+    document.body.style.overflow = ""; syncFsUI(); refit();
+  }
+  function toggleFS() {
+    if (document.fullscreenElement || GAME.classList.contains("fs-fake")) exitFS(); else enterFS();
+  }
+  if (fsBtn) fsBtn.addEventListener("click", toggleFS);
+  if (fsBtnMenu) fsBtnMenu.addEventListener("click", toggleFS);
+  if (fsExit) fsExit.addEventListener("click", exitFS);
+  if (fsHint) fsHint.addEventListener("click", hideFsHint);
+  document.addEventListener("fullscreenchange", function () { syncFsUI(); refit(); });
+})();
 
 /* ---------- Boot ---------- */
 level = buildLevel(0);
