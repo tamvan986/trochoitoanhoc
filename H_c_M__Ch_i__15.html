@@ -160,7 +160,8 @@
       .touch.fly .cluster.move{visibility:hidden}
       .touch.fly .tbtn.fire{font-size:16px}
       .touch.fly .tbtn.jump,.touch.fly .tbtn.fire{width:84px;height:84px}
-      .grid{display:grid;grid-template-columns:1.05fr 1fr 1fr;gap:14px;margin-top:22px}
+      .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
+      .grid>*{min-width:0}
       @media (max-width:900px){.grid{grid-template-columns:1fr}}
       .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:18px 20px}
       .card h2{font-size:18px;margin:0 0 12px;font-weight:800;display:flex;align-items:center;gap:9px}
@@ -217,9 +218,20 @@
         .stage.expanded{aspect-ratio:auto;height:min(86vh,640px);max-height:none}
         .stage.expanded canvas{position:absolute;top:0;left:0;width:100%;height:auto;aspect-ratio:16/9}
         .stage.expanded .hud{visibility:hidden}
+
         .quiz-card{padding:17px 16px 14px}
         .menu-card h2{font-size:30px}
       }
+      /* Toàn màn hình (nút ⛶): Fullscreen API thật; iPhone Safari không có API thì dùng chế độ giả toàn màn hình */
+      .stage:fullscreen,.stage:-webkit-full-screen{width:100vw;height:100dvh;max-height:none;border-radius:0;border:0;aspect-ratio:auto;background:#000}
+      .stage:fullscreen canvas,.stage:-webkit-full-screen canvas{object-fit:contain}
+      .stage.fs-fake{position:fixed;inset:0;width:100vw;height:100dvh;max-height:none;border-radius:0;border:0;aspect-ratio:auto;background:#000;z-index:9999}
+      .stage.fs-fake canvas{object-fit:contain}
+      .fs-hint{position:absolute;top:52px;left:10px;background:rgba(0,0,0,.78);color:#ffe9c9;font-weight:800;font-size:15px;padding:9px 16px;border-radius:999px;z-index:40;display:none;white-space:nowrap;cursor:pointer;max-width:calc(100% - 130px);overflow:hidden;text-overflow:ellipsis}
+      .stage:fullscreen .fs-hint.show,.stage:-webkit-full-screen .fs-hint.show,.stage.fs-fake .fs-hint.show{display:block}
+      @media (orientation:landscape){.fs-hint{display:none!important}}
+      .fs-exit{display:none;position:absolute;top:52px;right:10px;z-index:41;background:rgba(0,0,0,.7);color:#fff;border:1.5px solid rgba(255,255,255,.45);border-radius:999px;padding:8px 14px;font-weight:800;font-size:14px;cursor:pointer}
+      .stage:fullscreen .fs-exit,.stage:-webkit-full-screen .fs-exit,.stage.fs-fake .fs-exit{display:block}
     </style>
   </head>
   <body>
@@ -253,6 +265,7 @@
           <button class="iconbtn" id="pauseBtn" type="button">⏸ Tạm dừng</button>
           <button class="iconbtn" id="muteBtn" type="button">🔊 Âm thanh</button>
           <button class="iconbtn" id="restartBtn" type="button">↻ Chơi lại</button>
+          <button class="iconbtn" id="fsBtn" type="button">⛶ Toàn màn hình</button>
         </div>
       </div>
 
@@ -270,6 +283,8 @@
           <div class="box" id="hudCount">🎯 0</div>
         </div>
         <div class="toast" id="toast"></div>
+        <div class="fs-hint" id="fsHint">📱 Xoay ngang để chơi lớn nhất</div>
+        <button class="fs-exit" id="fsExitBtn" type="button">✕ Thoát</button>
 
         <!-- HỎI NHANH NGAY TRONG GAME: không mở màn hình riêng; riêng trò chim bay thì game dừng hẳn khi câu hỏi hiện lên -->
         <div class="qbar hidden" id="quickBar">
@@ -412,7 +427,7 @@
         </section>
       </div>
 
-      <div class="grid" style="grid-template-columns:1fr 1fr">
+      <div class="grid">
         <section class="card" id="uploadCard">
           <h2><span class="dot"></span>Tải đề của thầy lên — file Word (.docx)</h2>
           <p style="font-size:14.5px;line-height:1.55;margin:0 0 6px">Thầy soạn đề trong <b>Word</b> theo đúng mẫu dưới đây rồi tải file <b>.docx</b> lên: game sẽ đọc đề, <b>xáo trộn vị trí đáp án đúng mỗi ván</b> và dùng đề của thầy thay cho (hoặc thêm vào) kho 108 câu sẵn có. Công thức Toán trong Word gõ dạng <b>$...$</b> — ví dụ <b>$y = x^3 - 3x$</b>, <b>$\frac{1}{2}$</b>, <b>$\sqrt{14}$</b>, <b>$\vec{a} = (1; 2; 3)$</b> — game tự hiển thị <b>chuẩn LaTeX</b> rất nét.</p>
@@ -2234,6 +2249,50 @@ Giải thích: Chia tử và mẫu cho $x$ được giới hạn bằng $3$.</di
     $("resumeBtn").addEventListener("click", togglePause);
     $("muteBtn").addEventListener("click", function(){ muted = !muted; this.textContent = muted ? "🔇 Đã tắt tiếng" : "🔊 Âm thanh"; if(!muted) sPower(); });
     $("restartBtn").addEventListener("click", function(){ if(state!=="menu") startGame(); });
+    /* Toàn màn hình: dùng Fullscreen API; iPhone Safari không có API thì dùng chế độ giả toàn màn hình */
+    function fsSupported(){ var st=$("stage"); return !!(st.requestFullscreen||st.webkitRequestFullscreen); }
+    function syncFsUI(){
+      var on = !!document.fullscreenElement || $("stage").classList.contains("fs-fake");
+      $("fsBtn").textContent = on ? "⛶ Thoát toàn màn hình" : "⛶ Toàn màn hình";
+      var hint = $("fsHint");
+      if(on && window.matchMedia("(orientation: portrait)").matches){ hint.classList.add("show"); } else { hint.classList.remove("show"); }
+    }
+    function hideFsHint(){ $("fsHint").classList.remove("show"); }
+    function sizeFakeFS(){
+      var st=$("stage");
+      var vv = window.visualViewport;
+      var w = vv ? vv.width : window.innerWidth, h = vv ? vv.height : window.innerHeight;
+      st.style.left="0px"; st.style.top="0px"; st.style.width=w+"px"; st.style.height=h+"px";
+    }
+    function enterFakeFS(){
+      var st=$("stage");
+      st.classList.add("fs-fake"); sizeFakeFS(); document.body.style.overflow="hidden";
+      if(window.visualViewport) window.visualViewport.addEventListener("resize", sizeFakeFS);
+      syncFsUI();
+    }
+    function enterFS(){
+      var st=$("stage");
+      if(fsSupported()){
+        var pr = st.requestFullscreen ? st.requestFullscreen({navigationUI:"hide"}) : st.webkitRequestFullscreen();
+        if(pr && pr.catch) pr.catch(function(){ enterFakeFS(); });
+      } else {
+        enterFakeFS();
+      }
+      try{ if(screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(function(){}); }catch(e){}
+      setTimeout(hideFsHint, 5000);
+    }
+    function exitFS(){
+      if(document.fullscreenElement){ document.exitFullscreen(); }
+      var st=$("stage");
+      st.classList.remove("fs-fake");
+      st.style.left=""; st.style.top=""; st.style.width=""; st.style.height="";
+      if(window.visualViewport) window.visualViewport.removeEventListener("resize", sizeFakeFS);
+      document.body.style.overflow=""; syncFsUI();
+    }
+    $("fsBtn").addEventListener("click", function(){ if(document.fullscreenElement || $("stage").classList.contains("fs-fake")) exitFS(); else enterFS(); });
+    $("fsExitBtn").addEventListener("click", exitFS);
+    $("fsHint").addEventListener("click", hideFsHint);
+    document.addEventListener("fullscreenchange", syncFsUI);
     $("startBtn").addEventListener("click", startGame);
     $("againBtn").addEventListener("click", startGame);
     $("stageBtn").addEventListener("click", function(){
